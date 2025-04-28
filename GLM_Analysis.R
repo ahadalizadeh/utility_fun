@@ -20,7 +20,8 @@ GLM_Analysis <- R6::R6Class("GLM_Analysis", lock_objects = FALSE, lock_class = F
                               n.model.univariate  = 0,
                               stepwise    = FALSE,
                               initialize = function(data, formula, family = "gaussian", bayes = FALSE,
-                                                    univariate=FALSE, stepwise=FALSE){
+                                                    univariate=FALSE, stepwise=FALSE, digits = 3){
+                                self$digits      = digits
                                 self$data      = data
                                 self$family    = family
                                 self$bayes     = bayes
@@ -201,7 +202,7 @@ GLM_Analysis <- R6::R6Class("GLM_Analysis", lock_objects = FALSE, lock_class = F
                             ),
                             
                             private = list(
-                              CI = function(M0,round=2, Family=self$family){
+                              CI = function(M0,round=self$digits, Family=self$family){
                                 # M0: glm or arm::bayesglm object.
                                 Re2<- data.frame()
                                 if( class(M0)[1]== "bayesglm" ){
