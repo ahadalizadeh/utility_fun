@@ -223,6 +223,132 @@ Repeat.measurment =  function(data = NULL,
   res
 }
 
+#############################################################################################################################
+Repeat.measurment.helper  = function(  data = NULL, 
+  formula, 
+  ID,
+  group.name = "Group",
+  adjust ="none",
+  wd.Table = FALSE){
+  comparison.formula2 = as.formula(paste0("~ Time|",group.name))
+  comparison.formula1 = as.formula(paste0(  "~", group.name, "|Time" ))
+  
+  if(!is.factor(data[[group.name]])) stop("Group must be factor!")
+  MM1 =Repeat.measurment (data =data, formula = formula, ID = ID,
+                          comparison.formula =comparison.formula1, adjust=adjust)
+  
+  MM2 =Repeat.measurment (data =data, formula = formula, ID = ID,
+                          comparison.formula = comparison.formula2, adjust=adjust)
+  
+  
+  if(any(MM1$main.results$univariate.tests$sphericity.tests[,"p-value"]<0.05)){
+    GG = MM1$main.results$univariate.tests$pval.adjustments[,c("GG eps","Pr(>F[GG])")]
+    newGG =( MM1$main.results$univariate.tests$univariate.tests)
+    newGG[rownames(GG),c( "num Df", "den Df")] = newGG[rownames(GG),c( "num Df", "den Df")]*GG[1,1]
+    newGG[rownames(GG),c( "Pr(>F)")] = GG[rownames(GG),c( "Pr(>F[GG])" )] 
+  }
+  newGG = as.data.frame(newGG)[1:dim(newGG)[1], ]  
+  
+  
+  multivariate.tests  =MM1$main.results$univariate.tests$multivariate.test
+  multivariate.tests.res = list()
+  for (i in 1:length(multivariate.tests)) {
+    multivariate.tests.res[[i]] = myprint(multivariate.tests[[i]])["Pillai",c("test stat","approx F","num Df",
+                                                                              "den Df", "Pr(>F)")]
+  }
+  names(multivariate.tests.res) = names(multivariate.tests)
+  multivariate.tests.res = do.call(rbind,multivariate.tests.res)
+  names(multivariate.tests.res) =
+    c("Pillai statistic","Pillai F","Pillai num Df",                                               "Pillai den Df", "Pillai P-value") 
+  
+  multivariate.tests.res$`Pillai P-value` = round(multivariate.tests.res$`Pillai P-value`, 3)
+  
+  re = cbind(name = rownames(newGG),multivariate.tests.res,(newGG))
+  
+  eta = as.data.frame(MM1$main.results$eta_squared)
+  eta$Parameter
+  re$eta_squared = NA
+  re[eta$Parameter,"eta_squared"] = round(eta$Eta2_partial,3)
+  
+  MM1$main.results$comparison_summray_data
+  tt= t(MM2$main.results$comparison_summray_data)
+  MM1$main.results$comparison$effect = NA
+  MM1$main.results$comparison$effect = paste0(
+    round(MM1$main.results$comparison$estimate,2)," (",
+    round(MM1$main.results$comparison$estimate - 1.96*
+            MM1$main.results$comparison$SE,2),", ",
+    round(MM1$main.results$comparison$estimate + 1.96*
+            MM1$main.results$comparison$SE,2),")"
+  )
+  MM1$main.results$comparison[,c( "p.value" )] = round(MM1$main.results$comparison[,c( "p.value" )],3)
+  
+  rr=cbind(  "Measurement time points" =as.character(MM1$main.results$comparison$Time),tt[MM1$main.results$comparison$Time,],
+             MM1$main.results$comparison[,   
+                                         c( "p.value","effect")])
+  rr_dim1 = dim(rr)[1]
+  rr_dim2 = dim(rr)[2]
+  re_dim1 = dim(re)[1]
+  re_dim2 = dim(re)[2]
+  rrre = rep(NA,(rr_dim2+re_dim2)*max(rr_dim1,re_dim1))
+  dim(rrre) = c(max(rr_dim1,re_dim1), rr_dim2+re_dim2)
+  rrre = as.data.frame(rrre)
+  rrre[1:rr_dim1, 1:rr_dim2] = rr
+  rrre[1:re_dim1, rr_dim2+1:re_dim2] = re
+  names(rr)[which(names(rr)=="effect" )] = "Mean Difference (95% CI)"
+  names(re) =  c("Effect","Pillai's statistic", "Pillai F" ,       
+                 "Pillai num Df","Pillai den Df","Pillai P-value","Sum Sq",          
+                 "num Df","Error SS","den Df","F value" ,        
+                 "P-value","Eta-Squared" )
+  
+  
+  
+  names(rrre) = c(names(rr), names(re))
+  comment_rrre =
+    paste0(
+      "The P-values of within group comparisons: ",
+      paste0(  MM2$main.results$comparison$Time_pairwise,
+               " in group " ,
+               MM2$main.results$comparison$Group,
+               " is ",
+               round(MM2$main.results$comparison$p.value,3)
+               , collapse = ", "))
+  
+  
+ library(dplyr)
+rrre =  rrre   %>% mutate_if(is.numeric, round, 3)
+
+rrre = cbind(Response = "", rrre)
+rrre[1,1] =  paste0(all.vars(update.formula(formula, .~1)), collapse = "|")
+
+for (i in 1:dim(rrre)[1]) {
+  for (j in 1:dim(rrre)[2]) {
+    if(is.na(rrre[i,j]))    rrre[i,j] = " "
+  }
+}
+rrre$`Error SS` = NULL
+rrre$`Sum Sq` = NULL
+
+wd.Table2=
+  function(x=rrre,... , filename=NULL, path = ""){
+    if("RDCOMClient" %in% rownames(installed.packages()) == FALSE)  { 
+      # Sys.setenv("TAR" = "internal") # if you need it.
+      # devtools::install_github("omegahat/RDCOMClient")
+      devtools::install_github('omegahat/RDCOMClient')
+    }
+    R2wd::wdGet(filename,path , method="RDCOMClient")
+    R2wd::wdBody("\n\n")
+    R2wd::wdTable(as.data.frame(x) ,... )
+    cat("Done!\n")
+  }
+
+if(isTRUE(wd.Table))   wd.Table2(rrre,comment_rrre)
+list(results = rrre, models = list(MM1,MM2))
+  
+}
+
+
+
+
 ###################Examples#######################
 # Data  = data.frame(
 #   R = 1:1000,
@@ -247,3 +373,8 @@ Repeat.measurment =  function(data = NULL,
 # 
 # MM2$main.results
 # 
+# Data$Group = as.factor(Data$Group)
+# rrre =Repeat.measurment.helper (data =Data, formula = cbind(Before, After, Followup) ~(  Group)*Time,
+#                         ID = "ID",
+#                       group.name = "Group" ,
+#                       wd.Table = T)
