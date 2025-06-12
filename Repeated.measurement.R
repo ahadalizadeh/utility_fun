@@ -1,3 +1,86 @@
+
+myprint  = function (x, SSP = TRUE, SSPE = SSP, digits = getOption("digits"), 
+                     ...) 
+{
+  library(car)
+  test <- x$test
+  if (!is.null(x$P) && SSP) {
+    P <- x$P
+    cat("\n Response transformation matrix:\n")
+    attr(P, "assign") <- NULL
+    attr(P, "contrasts") <- NULL
+    print(P, digits = digits)
+  }
+  if (SSP) {
+    cat("\nSum of squares and products for the hypothesis:\n")
+    print(x$SSPH, digits = digits)
+  }
+  if (SSPE) {
+    cat("\nSum of squares and products for error:\n")
+    print(x$SSPE, digits = digits)
+  }
+  if ((!is.null(x$singular)) && x$singular) {
+    warning("the error SSP matrix is singular; multivariate tests are unavailable")
+    return(invisible(x))
+  }
+  SSPE.qr <- qr(x$SSPE)
+  eigs <- Re(eigen(qr.coef(SSPE.qr, x$SSPH), symmetric = FALSE)$values)
+  tests <- matrix(NA, 4, 4)
+  rownames(tests) <- c("Pillai", "Wilks", "Hotelling-Lawley", 
+                       "Roy")
+  if ("Pillai" %in% test) 
+    tests[1, 1:4] <- car:::Pillai(eigs, x$df, x$df.residual)
+  if ("Wilks" %in% test) 
+    tests[2, 1:4] <- car:::Wilks(eigs, x$df, x$df.residual)
+  if ("Hotelling-Lawley" %in% test) 
+    tests[3, 1:4] <- car:::HL(eigs, x$df, x$df.residual)
+  if ("Roy" %in% test) 
+    tests[4, 1:4] <- car:::Roy(eigs, x$df, x$df.residual)
+  tests <- na.omit(tests)
+  ok <- tests[, 2] >= 0 & tests[, 3] > 0 & tests[, 4] > 0
+  ok <- !is.na(ok) & ok
+  tests <- cbind(x$df, tests, pf(tests[ok, 2], tests[ok, 3], 
+                                 tests[ok, 4], lower.tail = FALSE))
+  colnames(tests) <- c("Df", "test stat", "approx F", "num Df", 
+                       "den Df", "Pr(>F)")
+  tests <- structure(as.data.frame(tests), heading = paste("\nMultivariate Test", 
+                                                           if (nrow(tests) > 1) 
+                                                             "s", ": ", x$title, sep = ""), class = c("anova", 
+                                                                                                      "data.frame"))
+  print(tests, digits = digits)
+  invisible(tests)
+}
+
+
+
+
+
+myprint2=function (x, digits = max(getOption("digits") - 2L, 3L), signif.stars = getOption("show.signif.stars"), 
+                   ...) 
+{
+  if (!is.null(heading <- attr(x, "heading"))) 
+    cat(heading, sep = "\n")
+  nc <- dim(x)[2L]
+  if (is.null(cn <- colnames(x))) 
+    stop("'anova' object must have colnames")
+  has.P <- grepl("^(P|Pr)\\(", cn[nc])
+  zap.i <- 1L:(if (has.P) 
+    nc - 1
+    else nc)
+  i <- which(substr(cn, 2, 7) == " value")
+  i <- c(i, which(!is.na(match(cn, c("F", "Cp", "Chisq")))))
+  if (length(i)) 
+    zap.i <- zap.i[!(zap.i %in% i)]
+  tst.i <- i
+  if (length(i <- grep("Df$", cn))) 
+    zap.i <- zap.i[!(zap.i %in% i)]
+  (data.frame(x))
+  
+  # invisible(x)
+}
+
+
+
 Repeat.measurment =  function(data = NULL, 
                               formula  , 
                               ID,
@@ -174,27 +257,27 @@ Repeat.measurment =  function(data = NULL,
   comparison_summray_data = NULL
   
   if(!is.null(comparison.formula)){
-  comparison.formula.IV.names = all.vars(update(comparison.formula, 1 ~ .))
-  # melt.data<<- melt.data
-  
-  Rnames <- row.names(l)
-  
-  comparison_summray_data <-
-    melt.data  %>% group_by_at(.vars = comparison.formula.IV.names ) %>%
-    summarise(
-      y = paste0(round(mean(value, na.rm = TRUE),2)," \u00B1 ", round(sd(value, na.rm = TRUE),2)),
-      .groups = 'drop'
-    )
-  comparison_summray_data <- reshape2::acast(comparison_summray_data, as.formula(
-    paste0(comparison.formula.IV.names[2] ,"~",comparison.formula.IV.names[1])) )
-  
-  
-  
-  if(all(row.names(comparison_summray_data) == Rnames)) {
-    comparison_summray_data = comparison_summray_data %+% l 
-    row.names(comparison_summray_data) = row.names(l)
-    colnames(comparison_summray_data) = colnames(l)
-  } 
+    comparison.formula.IV.names = all.vars(update(comparison.formula, 1 ~ .))
+    # melt.data<<- melt.data
+    
+    Rnames <- row.names(l)
+    
+    comparison_summray_data <-
+      melt.data  %>% group_by_at(.vars = comparison.formula.IV.names ) %>%
+      summarise(
+        y = paste0(round(mean(value, na.rm = TRUE),2)," \u00B1 ", round(sd(value, na.rm = TRUE),2)),
+        .groups = 'drop'
+      )
+    comparison_summray_data <- reshape2::acast(comparison_summray_data, as.formula(
+      paste0(comparison.formula.IV.names[2] ,"~",comparison.formula.IV.names[1])) )
+    
+    
+    
+    if(all(row.names(comparison_summray_data) == Rnames)) {
+      comparison_summray_data = comparison_summray_data %+% l 
+      row.names(comparison_summray_data) = row.names(l)
+      colnames(comparison_summray_data) = colnames(l)
+    } 
   }
   ...fixed123456789<<- NULL  
   rm(...fixed123456789, envir = globalenv()) 
@@ -225,11 +308,11 @@ Repeat.measurment =  function(data = NULL,
 
 #############################################################################################################################
 Repeat.measurment.helper  = function(  data = NULL, 
-  formula, 
-  ID,
-  group.name = "Group",
-  adjust ="none",
-  wd.Table = FALSE){
+                                       formula, 
+                                       ID,
+                                       group.name = "Group",
+                                       adjust ="none",
+                                       wd.Table = FALSE){
   comparison.formula2 = as.formula(paste0("~ Time|",group.name))
   comparison.formula1 = as.formula(paste0(  "~", group.name, "|Time" ))
   
@@ -314,35 +397,35 @@ Repeat.measurment.helper  = function(  data = NULL,
                , collapse = ", "))
   
   
- library(dplyr)
-rrre =  rrre   %>% mutate_if(is.numeric, round, 3)
-
-rrre = cbind(Response = "", rrre)
-rrre[1,1] =  paste0(all.vars(update.formula(formula, .~1)), collapse = "|")
-
-for (i in 1:dim(rrre)[1]) {
-  for (j in 1:dim(rrre)[2]) {
-    if(is.na(rrre[i,j]))    rrre[i,j] = " "
-  }
-}
-rrre$`Error SS` = NULL
-rrre$`Sum Sq` = NULL
-
-wd.Table2=
-  function(x=rrre,... , filename=NULL, path = ""){
-    if("RDCOMClient" %in% rownames(installed.packages()) == FALSE)  { 
-      # Sys.setenv("TAR" = "internal") # if you need it.
-      # devtools::install_github("omegahat/RDCOMClient")
-      devtools::install_github('omegahat/RDCOMClient')
+  library(dplyr)
+  rrre =  rrre   %>% mutate_if(is.numeric, round, 3)
+  
+  rrre = cbind(Response = "", rrre)
+  rrre[1,1] =  paste0(all.vars(update.formula(formula, .~1)), collapse = "|")
+  
+  for (i in 1:dim(rrre)[1]) {
+    for (j in 1:dim(rrre)[2]) {
+      if(is.na(rrre[i,j]))    rrre[i,j] = " "
     }
-    R2wd::wdGet(filename,path , method="RDCOMClient")
-    R2wd::wdBody("\n\n")
-    R2wd::wdTable(as.data.frame(x) ,... )
-    cat("Done!\n")
   }
-
-if(isTRUE(wd.Table))   wd.Table2(rrre,comment_rrre)
-list(results = rrre, models = list(MM1,MM2))
+  rrre$`Error SS` = NULL
+  rrre$`Sum Sq` = NULL
+  
+  wd.Table2=
+    function(x=rrre,... , filename=NULL, path = ""){
+      if("RDCOMClient" %in% rownames(installed.packages()) == FALSE)  { 
+        # Sys.setenv("TAR" = "internal") # if you need it.
+        # devtools::install_github("omegahat/RDCOMClient")
+        devtools::install_github('omegahat/RDCOMClient')
+      }
+      R2wd::wdGet(filename,path , method="RDCOMClient")
+      R2wd::wdBody("\n\n")
+      R2wd::wdTable(as.data.frame(x) ,... )
+      cat("Done!\n")
+    }
+  
+  if(isTRUE(wd.Table))   wd.Table2(rrre,comment_rrre)
+  list(results = rrre, models = list(MM1,MM2))
   
 }
 
