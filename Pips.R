@@ -121,3 +121,45 @@ groups = function(res, ..., add = FALSE){
   class(res) = c("DS")
   res
 }
+
+
+
+compare_group = function(res){
+  data = res$data
+  respanse= res$responses
+  vars= res$vars
+ FH= lapply(1:length(vars),function(j){
+   FHJ= lapply(1:length(respanse),function(i){
+     YY =   Table_One$new( data, deps.quantitative = respanse[i], group = vars[j])
+   return ( cbind.data.frame( group = vars[j], YY$results$quantitative))
+  })
+    do.call(rbind.data.frame,FHJ)
+})
+ if(is.null(res$results)) res$results =  FH  else {
+ res$results = append(res$results, FH) 
+  
+ } 
+res
+}
+
+compare_dist = function(res){
+  data = res$data
+  respanse= res$responses
+  vars= res$vars
+  FH= lapply(1:length(vars),function(j){
+    FHJ= lapply(1:length(respanse),function(i){
+      YY =   Table_One$new( data, deps.qualitative  = respanse[i], group = vars[j])
+      return ( cbind.data.frame( group = vars[j], YY$results$qualitative))
+    })
+    do.call(rbind,FHJ)
+  })
+  if(is.null(res$results)) res$results =  FH  else {
+    res$results = append(res$results, FH) 
+   }
+  res  
+}
+# FF = Data%>%    responses (   "J", "H"  )  %>%  groups( "gender", "Marital_status" )
+# mydoc  = FF |> compare_group()
+# mydoc3 = mydoc%>%    responses (  "gender" ,"education" )  %>%  groups(  "Marital_status" )
+# mydoc4= mydoc4 |> compare_dist() 
+# mydoc4  = mydoc4 |> compare_group()
