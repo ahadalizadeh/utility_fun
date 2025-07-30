@@ -51,7 +51,7 @@ def py2doc(df, doc=None , columnsname= None, title="", caption="", save=True, fi
 
 
 #Example
-#reticulate::source_python("Basefun.py")  # Loads Python functions into R
+#reticulate::source_python("https://raw.githubusercontent.com/ahadalizadeh/utility_fun/refs/heads/master/Word.py")  # Loads Python functions into R
 
 #from sklearn import datasets
 #import pandas as pd
