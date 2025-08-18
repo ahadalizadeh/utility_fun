@@ -4,7 +4,8 @@ def py2doc(df, doc=None , columnsname= None, title="", caption="", save=True, fi
     import docx
     from os import getcwd, listdir
     import pandas as pd
-# pip install python-doc
+#     pip install python-docx
+
 #     pip install pandas
 
     
