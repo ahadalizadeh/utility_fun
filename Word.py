@@ -4,7 +4,10 @@ def py2doc(df, doc=None , columnsname= None, title="", caption="", save=True, fi
     import docx
     from os import getcwd, listdir
     import pandas as pd
+# pip install python-doc
+#     pip install pandas
 
+    
     df = pd.DataFrame(df, columns= columnsname)
     #from docx.enum.table import WD_ROW_HEIGHT_RULE
     if (doc==None):
