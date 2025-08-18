@@ -40,7 +40,7 @@ GLM_Analysis <- R6::R6Class("GLM_Analysis", lock_objects = FALSE, lock_class = F
                                 
                                 
                                 
-                             self$sepration[self$n.model] <- !(m1$converged)
+                                self$sepration[self$n.model] <- !(m1$converged)
                                 
                                 
                                 m1.ci = private$CI(m1, Family = self$family)$type2.result
@@ -58,9 +58,9 @@ GLM_Analysis <- R6::R6Class("GLM_Analysis", lock_objects = FALSE, lock_class = F
                                   m1.ci = private$CI(m1, Family = self$family)$type2.result
                                   cat("\nWe re-analyzed using bayesian glm due to Separation.\nIgnore  warning!\n")
                                   names(m1.ci) =c("Effect ","P value ") %+% "Model " %+% n.model %+% "*"
-                                
                                   
-                                  } else {
+                                  
+                                } else {
                                   names(m1.ci) =c("Effect ","P value ") %+% "Model " %+% n.model
                                 }
                                 
@@ -83,9 +83,8 @@ GLM_Analysis <- R6::R6Class("GLM_Analysis", lock_objects = FALSE, lock_class = F
                                   self$add(formula =  best) 
                                   
                                 }
-                                
-                                
-                                
+                                 
+                                self$combine()  
                                 
                                 
                               },
@@ -100,7 +99,7 @@ GLM_Analysis <- R6::R6Class("GLM_Analysis", lock_objects = FALSE, lock_class = F
                                 self$bayes = bayes
                                 "%+%" <- function(x,y) paste0(x,y)
                                 m1 =  glm(formula = formula, family = family, data = data)
-                               
+                                
                                 deviance <- summary(m1)$deviance
                                 null_deviance <- summary(m1)$null.deviance
                                 rsquared <- 1 - (deviance / null_deviance)
@@ -197,7 +196,50 @@ GLM_Analysis <- R6::R6Class("GLM_Analysis", lock_objects = FALSE, lock_class = F
                                   re=  cbind(f[,1:2], dd)
                                 
                                 re
-                              }
+                              },
+                              combine = function(    ) {
+                                if(isTRUE(self$univariate)){
+                                  DDD = self$result$main.table
+                                  DDDU = DDD[,(3):(dim(DDD)[2]-2)]
+                                  DDDM = DDD[,1:2]
+                                  names(DDDM) =  c("Beta.Multivariate", "P-value.Multiariate")
+                                  DDDU[1,] = NA
+                                  DDDk = list()
+                                  kk = 0
+                                  for (k in 1:(dim(DDDU)[2]/2+1)) {
+                                    kk = kk+1
+                                    if(kk == 1) { 
+                                      DDDk[[kk]] =     data.frame("Beta" = "-", "P-value" = "-")
+                                      rownames( DDDk[[kk]] ) = "(Intercept)"
+                                      names(DDDk[[kk]]) = c("Beta.Univariate", "P-value.Univariate")
+                                      
+                                      next
+                                    }
+                                    DDDk[[kk]] =  DDDU[,paste0(c("Effect Model ", "P value Model "),k)]  
+                                    DDDk[[kk]] = DDDk[[kk]][which(!is.na(DDDk[[kk]][,2])),]
+                                    names(DDDk[[kk]]) = c("Beta.Univariate", "P-value.Univariate")
+                                  }
+                                  
+                                  DDDk = do.call(rbind.data.frame, DDDk)
+                                  DDDM = merge(DDDM, DDDk, all.x = TRUE, by = "row.names")
+                                  row.names(DDDM) = DDDM$Row.names
+                                  DDDM$Row.names = NULL
+                                  
+                                  if(isTRUE(self$stepwise)){
+                                    DDDB = DDD[,(dim(DDD)[2]-1):dim(DDD)[2]]
+                                    names(DDDB) =  c("Beta.Stepwise", "P-value.Stepwise")
+                                    DDDT = merge(DDDM, DDDB, all.x = TRUE, by = "row.names") 
+                                    row.names(DDDT) = DDDT$Row.names
+                                    DDDT$Row.names = NULL
+                                    DDDM = DDDT
+                                  }
+                                  self$result$main.table2=  DDDM 
+                                }}
+                              
+                              
+                              
+                              
+                              
                             ),
                             
                             private = list(
@@ -248,7 +290,10 @@ GLM_Analysis <- R6::R6Class("GLM_Analysis", lock_objects = FALSE, lock_class = F
                                   row.names(Re2)=row.names(Re)
                                 }
                                 list(type1.result=Re,type2.result=Re2)
-                              } 
+                              }
+                              
+                             
+                             
                               
                               
                               
