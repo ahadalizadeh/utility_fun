@@ -172,7 +172,7 @@ if(27 %in% n)
 }
 if(28 %in% n)          
  { cat("Downlding 'Word'  ... ")
-  reticulate::source_python("https://raw.githubusercontent.com/ahadalizadeh/utility_fun/refs/heads/master/Word.py") 
+  source("https://raw.githubusercontent.com/ahadalizadeh/utility_fun/refs/heads/master/py2doc.R")
   cat("done!\n")
 }
 }
