@@ -20,7 +20,9 @@ GLM_Analysis <- R6::R6Class("GLM_Analysis", lock_objects = FALSE, lock_class = F
                               n.model.univariate  = 0,
                               stepwise    = FALSE,
                               initialize = function(data, formula, family = "gaussian", bayes = FALSE,
-                                                    univariate=FALSE, stepwise=FALSE){
+                                                    univariate=FALSE, stepwise=FALSE,
+                                                   combine = FALSE
+                                                   ){
                                 self$data      = data
                                 self$family    = family
                                 self$bayes     = bayes
@@ -84,7 +86,7 @@ GLM_Analysis <- R6::R6Class("GLM_Analysis", lock_objects = FALSE, lock_class = F
                                   
                                 }
                                  
-                                self$combine()  
+                              if(combine)  self$combine()  
                                 
                                 
                               },
