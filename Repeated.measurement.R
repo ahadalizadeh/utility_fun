@@ -323,6 +323,12 @@ Repeat.measurment.helper  = function(  data = NULL,
   MM2 =Repeat.measurment (data =data, formula = formula, ID = ID,
                           comparison.formula = comparison.formula2, adjust=adjust)
   
+
+
+
+
+    newGG =( MM1$main.results$univariate.tests$univariate.tests)
+
   
   if(any(MM1$main.results$univariate.tests$sphericity.tests[,"p-value"]<0.05)){
     GG = MM1$main.results$univariate.tests$pval.adjustments[,c("GG eps","Pr(>F[GG])")]
