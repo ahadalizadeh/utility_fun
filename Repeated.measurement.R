@@ -429,9 +429,10 @@ Repeat.measurment.helper  = function(  data = NULL,
       R2wd::wdTable(as.data.frame(x) ,... )
       cat("Done!\n")
     }
+
   
   if(isTRUE(wd.Table))   wd.Table2(rrre,comment_rrre)
-  list(results = rrre, models = list(MM1,MM2))
+  list(results = rrre,caption = comment_rrre, models = list(MM1,MM2))
   
 }
 
